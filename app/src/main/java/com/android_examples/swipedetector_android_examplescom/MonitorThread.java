@@ -73,6 +73,7 @@ public class MonitorThread implements Runnable {
 
 	public void stopMeasuring() {
 		this.measuring = false;
+		mpRes.release();
 	}
 
 	public void fireActionFromActivity(GestureActions action) {
@@ -95,6 +96,10 @@ public class MonitorThread implements Runnable {
 				commandRequestTime = System.currentTimeMillis();
 
 				waitedGesture = actualAction;
+
+				if(mpRes != null){
+					mpRes.release();
+				}
 
 				// Say command
 				switch (actualAction) {
@@ -150,6 +155,10 @@ public class MonitorThread implements Runnable {
 							mpRes = MediaPlayer.create(mContext, R.raw.hiba);
 							mpRes.start();
 							finalResultOfTest = "NOK";
+						}
+
+						if(lastAnswerTime==0){
+							lastAnswerTime = System.currentTimeMillis();
 						}
 
 						// TODO: save out data
