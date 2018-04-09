@@ -83,6 +83,18 @@ public class MonitorThread implements Runnable {
      */
 	@Override
 	public void run() {
+
+		Log.d("Gesture Detection Step",
+			"*******************************************");
+
+		appendLog("Sleepness level : " + this.sleepnessLevel);
+
+		Log.d("Gesture Detection Step",
+			"******** Sleepness Level: " + this.sleepnessLevel + "*****");
+
+		Log.d("Gesture Detection Step",
+			"*******************************************");
+
 		// Write to the log file
 		appendLog("Chosen Action | " + "Random timing upper limit in secs | "
 			+ "Random timing lower limit in secs | " + "Waiting timing in secs | "
@@ -90,7 +102,7 @@ public class MonitorThread implements Runnable {
 			+ "Timestamp for request action | " + "Timestamp for last action | "
 			+ "Action counter | " + "Result");
 
-		appendLog("Sleepness level : " + this.sleepnessLevel);
+
 
 		makeATest();
 	}
