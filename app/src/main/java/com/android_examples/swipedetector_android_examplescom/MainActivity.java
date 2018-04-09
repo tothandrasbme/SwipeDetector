@@ -2,17 +2,24 @@ package com.android_examples.swipedetector_android_examplescom;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.OnGestureListener;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.NumberPicker;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.android_examples.swipedetector_android_examplescom.MonitorThread.GestureActions;
 
-public class MainActivity extends AppCompatActivity implements OnGestureListener {
+public class MainActivity extends AppCompatActivity implements OnGestureListener, NumberPicker.OnValueChangeListener {
 
 	GestureDetector gestureDetector;
 	Toast messageToScreen = null;
@@ -50,10 +57,9 @@ public class MainActivity extends AppCompatActivity implements OnGestureListener
 				messageToScreen = Toast
 					.makeText(MainActivity.this, " Start Monitoring ", Toast.LENGTH_LONG);
 				messageToScreen.show();
-				monitoring = new MonitorThread();
-				monitoring.setContext(getApplicationContext());
-				monitoring.initMonitorThread();
-				new Thread(monitoring).start();
+
+				showNumberDialog();
+
 			} else {
 				messageToScreen = Toast
 					.makeText(MainActivity.this, " Swipe Up ", Toast.LENGTH_LONG);
@@ -283,6 +289,56 @@ public class MainActivity extends AppCompatActivity implements OnGestureListener
 				REQUEST_EXTERNAL_STORAGE
 			);
 		}
+	}
+
+	@Override
+	public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+
+		Log.i("value is",""+newVal);
+
+	}
+
+	public void showNumberDialog()
+	{
+
+		final Dialog d = new Dialog(MainActivity.this);
+		d.setTitle("Mennyire fáradt? ");
+		d.setContentView(R.layout.number_dialog);
+		Button b1 = (Button) d.findViewById(R.id.button1);
+		Button b2 = (Button) d.findViewById(R.id.button2);
+		final NumberPicker np = (NumberPicker) d.findViewById(R.id.numberPicker1);
+		final TextView tv = (TextView) d.findViewById(R.id.header);
+		tv.setText("Kérem írja le mennyire fáradt 0-10 ! (0 nagyon éber , 10 nagyon fáradt)");
+		np.setMaxValue(10); // max value 100
+		np.setMinValue(0);   // min value 0
+		np.setWrapSelectorWheel(false);
+		np.setOnValueChangedListener(this);
+		b1.setOnClickListener(new OnClickListener()
+		{
+			@Override
+			public void onClick(View v) {
+				messageToScreen = Toast.makeText(MainActivity.this, " Chosen Number : " + String.valueOf(np.getValue()), Toast.LENGTH_LONG);
+				messageToScreen.show();
+
+				monitoring = new MonitorThread();
+				monitoring.setContext(getApplicationContext());
+				monitoring.initMonitorThread();
+				monitoring.setSleepnessLevel(String.valueOf(np.getValue()));
+				new Thread(monitoring).start();
+
+				d.dismiss();
+			}
+		});
+		b2.setOnClickListener(new OnClickListener()
+		{
+			@Override
+			public void onClick(View v) {
+				d.dismiss(); // dismiss the dialog
+			}
+		});
+		d.show();
+
+
 	}
 
 }

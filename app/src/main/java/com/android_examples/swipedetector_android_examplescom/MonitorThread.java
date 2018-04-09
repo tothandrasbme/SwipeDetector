@@ -33,6 +33,7 @@ public class MonitorThread implements Runnable {
 	boolean waitForActions = false;
 	private GestureActions actualGesture = GestureActions.GAP;
 	private GestureActions waitedGesture = GestureActions.GAP;
+	private String sleepnessLevel = "";
 
 	long commandRequestTime = 0;
 	long lastAnswerTime = 0;
@@ -73,6 +74,10 @@ public class MonitorThread implements Runnable {
 		}
 	}
 
+	public void setSleepnessLevel(String sleepnLevel) {
+		this.sleepnessLevel = sleepnLevel;
+	}
+
 	/*
 	 * Defines the code to run for this task.
      */
@@ -84,6 +89,9 @@ public class MonitorThread implements Runnable {
 			+ "Measurement Counter | " + "Random timing value | "
 			+ "Timestamp for request action | " + "Timestamp for last action | "
 			+ "Action counter | " + "Result");
+
+		appendLog("Sleepness level : " + this.sleepnessLevel);
+
 		makeATest();
 	}
 
