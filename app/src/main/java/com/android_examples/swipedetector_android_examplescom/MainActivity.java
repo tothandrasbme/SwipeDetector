@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements OnGestureListener
 				messageToScreen.show();
 				monitoring = new MonitorThread();
 				monitoring.setContext(getApplicationContext());
+				monitoring.initMonitorThread();
 				new Thread(monitoring).start();
 			} else {
 				messageToScreen = Toast

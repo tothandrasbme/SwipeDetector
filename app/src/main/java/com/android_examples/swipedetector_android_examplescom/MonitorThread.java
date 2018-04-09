@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Random;
 
 /**
@@ -17,35 +18,60 @@ import java.util.Random;
 
 public class MonitorThread implements Runnable {
 
-	int actualRandomTiming = 0;
-	int actualRandomExcercise = 0;
 	private static final int LOWER_RANDOM_LIMIT = 10;
 	private static final int HIGHER_RANDOM_LIMIT = 20;
 	private static final int WAIT_FOR_ACTION_IN_SEC = 5;
 	private static final Random RANDOM = new Random();
 	private static final Random ACTIONRANDOM = new Random();
+	private HashMap<GestureActions,MediaPlayer> players = new HashMap<>();
 	Handler randomTiming = new Handler();
 	Handler waitForAction = new Handler();
-	MediaPlayer mpRes = null;
 	Context mContext = null;
 	private int measurementCounter = 0;
 	private int actionCounter = 0;
 	boolean measuring = true;
-	private GestureActions actualGesture = GestureActions.BALROLJOBBRA;
-	private GestureActions waitedGesture = GestureActions.BALROLJOBBRA;
+	boolean waitForActions = false;
+	private GestureActions actualGesture = GestureActions.GAP;
+	private GestureActions waitedGesture = GestureActions.GAP;
 
 	long commandRequestTime = 0;
 	long lastAnswerTime = 0;
 	String finalResultOfTest = "";
 
 	public enum GestureActions {
-		BALROLJOBBRA, FENTROLLE, JOBBROLBALRA, LENTROLFEL, KERESZTBEBALRAFEL, KERESZTBEBALRALE, KERESZTBEJOBBRAFEL, KERESZTBEJOBBRALE
+		GAP, BALROLJOBBRA, FENTROLLE, JOBBROLBALRA, LENTROLFEL, KERESZTBEBALRAFEL, KERESZTBEBALRALE, KERESZTBEJOBBRAFEL, KERESZTBEJOBBRALE, OK, HIBA
 	}
 
 	public void setContext(Context c) {
 		this.mContext = c;
 	}
 
+	public MonitorThread() {
+	}
+
+	public void initMonitorThread() {
+		this.players.put(GestureActions.BALROLJOBBRA, MediaPlayer.create(mContext, R.raw.bj));
+		this.players.put(GestureActions.FENTROLLE, MediaPlayer.create(mContext, R.raw.fl));
+		this.players.put(GestureActions.JOBBROLBALRA, MediaPlayer.create(mContext, R.raw.jb));
+		this.players.put(GestureActions.LENTROLFEL, MediaPlayer.create(mContext, R.raw.lf));
+		this.players.put(GestureActions.KERESZTBEBALRAFEL, MediaPlayer.create(mContext, R.raw.kbf));
+		this.players.put(GestureActions.KERESZTBEBALRALE, MediaPlayer.create(mContext, R.raw.kbl));
+		this.players.put(GestureActions.KERESZTBEJOBBRAFEL, MediaPlayer.create(mContext, R.raw.kjf));
+		this.players.put(GestureActions.KERESZTBEJOBBRALE, MediaPlayer.create(mContext, R.raw.kjl));
+		this.players.put(GestureActions.OK, MediaPlayer.create(mContext, R.raw.ok));
+		this.players.put(GestureActions.HIBA, MediaPlayer.create(mContext, R.raw.hiba));
+	}
+
+
+	public class MyErrorListener implements MediaPlayer.OnErrorListener {
+		@Override
+		public boolean onError(MediaPlayer mp, int what, int extra) {
+			// The MediaPlayer has moved to the Error state, must be reset!
+			Log.d("MonitorThread","MediaPlayer error : " + what );
+			mp.reset();
+			return true;
+		}
+	}
 
 	/*
 	 * Defines the code to run for this task.
@@ -68,18 +94,25 @@ public class MonitorThread implements Runnable {
 	}
 
 	public static GestureActions getRandomAction() {
-		return GestureActions.values()[ACTIONRANDOM.nextInt(GestureActions.values().length)];
+		return GestureActions.values()[ACTIONRANDOM.nextInt(8)+1];
 	}
 
 	public void stopMeasuring() {
 		this.measuring = false;
-		mpRes.release();
 	}
 
 	public void fireActionFromActivity(GestureActions action) {
-		actualGesture = action;
-		actionCounter++;
-		lastAnswerTime = System.currentTimeMillis();
+		if(waitForActions) {
+			actualGesture = action;
+			actionCounter++;
+			lastAnswerTime = System.currentTimeMillis();
+		}
+	}
+
+	public void clearActionMonitoring() {
+		actualGesture = GestureActions.GAP;
+		actionCounter = 0;
+		lastAnswerTime = 0;
 	}
 
 	private void makeATest() {
@@ -97,47 +130,16 @@ public class MonitorThread implements Runnable {
 
 				waitedGesture = actualAction;
 
-				if(mpRes != null){
-					mpRes.release();
-				}
+				Log.d("MonitorThread","Gesture : Actual action" + actualAction.toString() );
 
-				// Say command
-				switch (actualAction) {
-					case BALROLJOBBRA:
-						mpRes = MediaPlayer.create(mContext, R.raw.bj);
-						mpRes.start();
-						break;
-					case FENTROLLE:
-						mpRes = MediaPlayer.create(mContext, R.raw.fl);
-						mpRes.start();
-						break;
-					case JOBBROLBALRA:
-						mpRes = MediaPlayer.create(mContext, R.raw.jb);
-						mpRes.start();
-						break;
-					case LENTROLFEL:
-						mpRes = MediaPlayer.create(mContext, R.raw.lf);
-						mpRes.start();
-						break;
-					case KERESZTBEBALRAFEL:
-						mpRes = MediaPlayer.create(mContext, R.raw.kbf);
-						mpRes.start();
-						break;
-					case KERESZTBEBALRALE:
-						mpRes = MediaPlayer.create(mContext, R.raw.kbl);
-						mpRes.start();
-						break;
-					case KERESZTBEJOBBRAFEL:
-						mpRes = MediaPlayer.create(mContext, R.raw.kjf);
-						mpRes.start();
-						break;
-					case KERESZTBEJOBBRALE:
-						mpRes = MediaPlayer.create(mContext, R.raw.kjl);
-						mpRes.start();
-						break;
+				players.get(actualAction).setOnErrorListener(new MyErrorListener());
+				players.get(actualAction).start();
 
+				// Action has been asked, so we are waiting for actions now
 
-				}
+				waitForActions = true;
+				clearActionMonitoring();
+
 				// Wait fix time
 
 				waitForAction.postDelayed(new Runnable() {
@@ -146,15 +148,20 @@ public class MonitorThread implements Runnable {
 
 						finalResultOfTest = "";
 
+						// The test period is over, so we are not waiting now actions
+						waitForActions = false;
+
 						// Todo evaluate the results and save
 						if (actualGesture == waitedGesture) {
-							mpRes = MediaPlayer.create(mContext, R.raw.ok);
-							mpRes.start();
+							players.get(GestureActions.OK).setOnErrorListener(new MyErrorListener());
+							players.get(GestureActions.OK).start();
 							finalResultOfTest = "Success";
+							Log.d("MonitorThread","Result : OK");
 						} else {
-							mpRes = MediaPlayer.create(mContext, R.raw.hiba);
-							mpRes.start();
+							players.get(GestureActions.HIBA).setOnErrorListener(new MyErrorListener());
+							players.get(GestureActions.HIBA).start();
 							finalResultOfTest = "NOK";
+							Log.d("MonitorThread","Result : NOK");
 						}
 
 						if(lastAnswerTime==0){
